@@ -130,6 +130,36 @@ const ENDPOINTS = {
   reimagine: 'https://clipdrop-api.co/reimagine/v1/reimagine'
 };
 
+async function apiCall(endpoint, formData) {
+  // Try direct call first
+  try {
+    var response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY },
+      body: formData
+    });
+    if (response.ok) return response;
+  } catch(e) {}
+  // Fallback: try multiple CORS proxies
+  var proxies = [
+    'https://corsproxy.io/?',
+    'https://proxy.cors.sh/',
+    'https://cors-anywhere.herokuapp.com/'
+  ];
+  for (var i = 0; i < proxies.length; i++) {
+    try {
+      var url = proxies[i] + endpoint;
+      var response = await fetch(url, {
+        method: 'POST',
+        headers: { 'x-api-key': API_KEY },
+        body: formData
+      });
+      if (response.ok) return response;
+    } catch(e) { continue; }
+  }
+  throw new Error('No se pudo conectar con la API. Intenta recargar la pagina.');
+}
+
 let currentTool = null;
 let imageLoaded = false;
 let history = [];
@@ -385,11 +415,7 @@ async function applyRemoveBg() {
     var blob = await getCanvasBlob();
     var formData = new FormData();
     formData.append('image_file', blob, 'image.png');
-    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.removeBg), {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY },
-      body: formData
-    });
+    var response = await apiCall(ENDPOINTS.removeBg, formData);
     if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
     var resultBlob = await response.blob();
     loadResultImage(resultBlob);
@@ -414,11 +440,7 @@ async function applyRemoveObj() {
     var formData = new FormData();
     formData.append('image_file', imgBlob, 'image.png');
     formData.append('mask_file', mskBlob, 'mask.png');
-    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.removeObj), {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY },
-      body: formData
-    });
+    var response = await apiCall(ENDPOINTS.removeObj, formData);
     if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
     var resultBlob = await response.blob();
     loadResultImage(resultBlob);
@@ -440,11 +462,7 @@ async function applyUpscale() {
     formData.append('image_file', blob, 'image.png');
     formData.append('target_width', tw.toString());
     formData.append('target_height', th.toString());
-    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.upscale), {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY },
-      body: formData
-    });
+    var response = await apiCall(ENDPOINTS.upscale, formData);
     if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
     var resultBlob = await response.blob();
     loadResultImage(resultBlob);
@@ -461,11 +479,7 @@ async function applyReimagine() {
     var blob = await getCanvasBlob();
     var formData = new FormData();
     formData.append('image_file', blob, 'image.png');
-    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.reimagine), {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY },
-      body: formData
-    });
+    var response = await apiCall(ENDPOINTS.reimagine, formData);
     if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
     var resultBlob = await response.blob();
     loadResultImage(resultBlob);
