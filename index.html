@@ -1,1126 +1,506 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PixelAI Studio - Editor de Fotos con IA</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #0f0f0f;
-            --bg-secondary: #1a1a2e;
-            --bg-tertiary: #16213e;
-            --accent-1: #667eea;
-            --accent-2: #764ba2;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0b0;
-            --border: rgba(255,255,255,0.08);
-            --shadow: 0 8px 32px rgba(0,0,0,0.4);
-            --radius: 12px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Photo Editor Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0f0f0f;color:#e0e0e0;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#1a1a2e}
+::-webkit-scrollbar-thumb{background:#667eea;border-radius:3px}
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+.topbar{height:48px;background:#1a1a2e;border-bottom:1px solid #2a2a4a;display:flex;align-items:center;padding:0 16px;justify-content:space-between;z-index:100}
+.topbar .logo{font-size:18px;font-weight:700;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar .actions{display:flex;gap:8px}
+.topbar .actions button{background:#2a2a4a;border:none;color:#e0e0e0;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+.topbar .actions button:hover{background:#667eea}
+.topbar .actions button:disabled{opacity:.4;cursor:not-allowed}
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-        }
+.main-layout{display:flex;height:calc(100vh - 48px)}
 
-        /* Layout */
-        .app-container {
-            display: grid;
-            grid-template-rows: 56px 1fr;
-            grid-template-columns: 64px 1fr 300px;
-            height: 100vh;
-            width: 100vw;
-        }
+.sidebar{width:64px;background:#1a1a2e;border-right:1px solid #2a2a4a;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px}
+.sidebar button{width:48px;height:48px;border:none;background:transparent;color:#888;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:20px}
+.sidebar button:hover{background:#2a2a4a;color:#e0e0e0}
+.sidebar button.active{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.sidebar button svg{width:22px;height:22px}
 
-        /* Top Bar */
-        .top-bar {
-            grid-column: 1 / -1;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            gap: 16px;
-            z-index: 100;
-        }
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#0a0a0a}
+.canvas-container{position:relative;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center}
+#mainCanvas{max-width:100%;max-height:calc(100vh - 80px);object-fit:contain;border-radius:4px;cursor:crosshair}
+#maskCanvas{position:absolute;top:0;left:0;cursor:crosshair;border-radius:4px}
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+.drop-zone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed #667eea;border-radius:12px;margin:20px;background:rgba(102,126,234,.05);transition:all .3s}
+.drop-zone.drag-over{background:rgba(102,126,234,.15);border-color:#764ba2}
+.drop-zone svg{width:64px;height:64px;color:#667eea;margin-bottom:16px}
+.drop-zone p{font-size:16px;color:#888;margin-bottom:8px}
+.drop-zone span{font-size:13px;color:#555}
 
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
+.right-panel{width:280px;background:#1a1a2e;border-left:1px solid #2a2a4a;padding:16px;overflow-y:auto;display:none}
+.right-panel.visible{display:block}
+.right-panel h3{font-size:14px;font-weight:600;margin-bottom:12px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.right-panel p{font-size:12px;color:#888;margin-bottom:16px;line-height:1.5}
+.right-panel .btn-apply{width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+.right-panel .btn-apply:hover{opacity:.9;transform:translateY(-1px)}
+.right-panel .btn-apply:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.right-panel label{display:block;font-size:12px;color:#aaa;margin-bottom:6px;margin-top:12px}
+.right-panel input[type="range"]{width:100%;accent-color:#667eea}
+.right-panel .brush-size-display{text-align:center;font-size:12px;color:#667eea;margin-top:4px}
 
-        .logo-text {
-            font-size: 16px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:1000;flex-direction:column}
+.overlay.visible{display:flex}
+.spinner{width:48px;height:48px;border:4px solid #2a2a4a;border-top-color:#667eea;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay p{margin-top:16px;font-size:14px;color:#ccc}
 
-        .top-bar-actions {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+.toast-container{position:fixed;top:60px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;animation:slideIn .3s ease;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.toast.success{background:#1a4a2e;border:1px solid #2d8a4e;color:#6ee7a0}
+.toast.error{background:#4a1a1a;border:1px solid #8a2d2d;color:#e76e6e}
+.toast.info{background:#1a2a4a;border:1px solid #2d4a8a;color:#6e9ee7}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.06);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.1);
-            color: var(--text-primary);
-        }
-
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .btn-icon:hover {
-            background: rgba(255,255,255,0.1);
-            color: var(--text-primary);
-        }
-
-        .btn-icon.disabled {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 16px 0;
-            gap: 4px;
-        }
-
-        .tool-btn {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-            font-size: 18px;
-        }
-
-        .tool-btn:hover {
-            background: rgba(255,255,255,0.08);
-            color: var(--text-primary);
-        }
-
-        .tool-btn.active {
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-            color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
-        .tool-btn .tooltip {
-            position: absolute;
-            left: 56px;
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 1000;
-            border: 1px solid var(--border);
-        }
-
-        .tool-btn:hover .tooltip {
-            opacity: 1;
-        }
-
-        /* Canvas Area */
-        .canvas-area {
-            background: var(--bg-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .canvas-wrapper {
-            position: relative;
-            max-width: 90%;
-            max-height: 90%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #mainCanvas {
-            max-width: 100%;
-            max-height: calc(100vh - 100px);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            display: none;
-        }
-
-        #maskCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            border-radius: 8px;
-            cursor: crosshair;
-            display: none;
-        }
-
-        .upload-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            padding: 60px;
-            border: 2px dashed rgba(255,255,255,0.15);
-            border-radius: 20px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .upload-area:hover {
-            border-color: var(--accent-1);
-            background: rgba(102, 126, 234, 0.05);
-        }
-
-        .upload-area svg {
-            width: 48px;
-            height: 48px;
-            color: var(--text-secondary);
-        }
-
-        .upload-area h3 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .upload-area p {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        /* Right Panel */
-        .right-panel {
-            background: var(--bg-secondary);
-            border-left: 1px solid var(--border);
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .right-panel.hidden {
-            display: none;
-        }
-
-        .panel-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .panel-desc {
-            font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .panel-section {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .input-group label {
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-
-        .input-group input {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 13px;
-            transition: var(--transition);
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--accent-1);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-        }
-
-        .brush-size-control {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 12px;
-        }
-
-        .brush-size-control input[type="range"] {
-            flex: 1;
-            -webkit-appearance: none;
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            outline: none;
-        }
-
-        .brush-size-control input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: var(--accent-1);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .brush-size-value {
-            font-size: 12px;
-            color: var(--text-secondary);
-            min-width: 30px;
-            text-align: right;
-        }
-
-        .apply-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            margin-top: 16px;
-        }
-
-        .apply-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .apply-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 15, 15, 0.85);
-            backdrop-filter: blur(8px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .loading-overlay.active {
-            display: flex;
-        }
-
-        .spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: var(--accent-1);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-size: 14px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        /* Toast */
-        .toast-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 10001;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .toast {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 20px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-primary);
-            box-shadow: var(--shadow);
-            animation: slideIn 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 280px;
-        }
-
-        .toast.success {
-            border-left: 3px solid #4ade80;
-        }
-
-        .toast.error {
-            border-left: 3px solid #f87171;
-        }
-
-        .toast.info {
-            border-left: 3px solid var(--accent-1);
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-
-        /* No image placeholder */
-        .no-image-msg {
-            font-size: 13px;
-            color: var(--text-secondary);
-            text-align: center;
-            padding: 20px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .app-container {
-                grid-template-columns: 56px 1fr;
-            }
-            .right-panel {
-                position: fixed;
-                right: 0;
-                top: 56px;
-                bottom: 0;
-                width: 280px;
-                z-index: 500;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-            }
-            .right-panel.mobile-open {
-                transform: translateX(0);
-            }
-        }
-    </style>
+.hidden-input{display:none}
+</style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Top Bar -->
-        <header class="top-bar">
-            <div class="logo">
-                <div class="logo-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                </div>
-                <span class="logo-text">PixelAI Studio</span>
-            </div>
-            <div class="top-bar-actions">
-                <button class="btn-icon" id="undoBtn" title="Deshacer" onclick="undo()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6.69 3L3 13"/></svg>
-                </button>
-                <button class="btn-icon" id="redoBtn" title="Rehacer" onclick="redo()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016.69 3L21 13"/></svg>
-                </button>
-                <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Cargar
-                </button>
-                <button class="btn btn-primary" onclick="downloadImage()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Exportar
-                </button>
-            </div>
-            <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileUpload(event)">
-        </header>
+<div class="topbar">
+  <div class="logo">AI Photo Editor Pro</div>
+  <div class="actions">
+    <button id="btnUndo" onclick="undo()" disabled title="Deshacer (Ctrl+Z)">&#8630; Deshacer</button>
+    <button id="btnRedo" onclick="redo()" disabled title="Rehacer (Ctrl+Shift+Z)">&#8631; Rehacer</button>
+    <button onclick="exportImage()" title="Exportar (Ctrl+S)">&#11015; Exportar</button>
+  </div>
+</div>
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <button class="tool-btn active" data-tool="select" onclick="selectTool('select')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
-                <span class="tooltip">Seleccionar</span>
-            </button>
-            <button class="tool-btn" data-tool="remove-bg" onclick="selectTool('remove-bg')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>
-                <span class="tooltip">Eliminar Fondo</span>
-            </button>
-            <button class="tool-btn" data-tool="cleanup" onclick="selectTool('cleanup')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
-                <span class="tooltip">Eliminar Objetos</span>
-            </button>
-            <button class="tool-btn" data-tool="upscale" onclick="selectTool('upscale')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-                <span class="tooltip">Mejorar Calidad</span>
-            </button>
-            <button class="tool-btn" data-tool="reimagine" onclick="selectTool('reimagine')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                <span class="tooltip">Reimaginar</span>
-            </button>
-        </aside>
+<div class="main-layout">
+  <div class="sidebar">
+    <button id="toolUpload" title="Cargar imagen" onclick="document.getElementById('fileInput').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </button>
+    <button id="toolBg" title="Eliminar fondo" onclick="selectTool('removeBg')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg>
+    </button>
+    <button id="toolRemove" title="Eliminar objetos" onclick="selectTool('removeObj')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    </button>
+    <button id="toolUpscale" title="Mejorar calidad" onclick="selectTool('upscale')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </button>
+    <button id="toolReimagine" title="Reimaginar" onclick="selectTool('reimagine')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </button>
+  </div>
 
-        <!-- Canvas Area -->
-        <main class="canvas-area" id="canvasArea">
-            <div class="canvas-wrapper" id="canvasWrapper">
-                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <h3>Arrastra o haz clic para cargar</h3>
-                    <p>Soporta JPG, PNG, WEBP</p>
-                </div>
-                <canvas id="mainCanvas"></canvas>
-                <canvas id="maskCanvas"></canvas>
-            </div>
-        </main>
-
-        <!-- Right Panel -->
-        <aside class="right-panel" id="rightPanel">
-            <!-- Remove Background Panel -->
-            <div id="panel-remove-bg" class="tool-panel" style="display:none">
-                <div class="panel-section">
-                    <div class="panel-title">Eliminar Fondo</div>
-                    <div class="panel-desc">Elimina automaticamente el fondo de la imagen usando IA. El resultado tendra fondo transparente.</div>
-                    <button class="apply-btn" onclick="applyRemoveBg()">Aplicar</button>
-                </div>
-            </div>
-
-            <!-- Cleanup Panel -->
-            <div id="panel-cleanup" class="tool-panel" style="display:none">
-                <div class="panel-section">
-                    <div class="panel-title">Eliminar Objetos</div>
-                    <div class="panel-desc">Pinta sobre los objetos que deseas eliminar. La IA rellenara esas areas de forma natural.</div>
-                    <div class="brush-size-control">
-                        <label style="font-size:12px;color:var(--text-secondary)">Pincel:</label>
-                        <input type="range" id="brushSize" min="5" max="80" value="20" oninput="updateBrushSize(this.value)">
-                        <span class="brush-size-value" id="brushSizeValue">20px</span>
-                    </div>
-                    <button class="apply-btn" onclick="applyCleanup()">Aplicar</button>
-                </div>
-            </div>
-
-            <!-- Upscale Panel -->
-            <div id="panel-upscale" class="tool-panel" style="display:none">
-                <div class="panel-section">
-                    <div class="panel-title">Mejorar Calidad / Upscale</div>
-                    <div class="panel-desc">Aumenta la resolucion de la imagen manteniendo la calidad con IA.</div>
-                    <div class="input-group">
-                        <label>Ancho objetivo (px)</label>
-                        <input type="number" id="targetWidth" placeholder="ej: 2048" value="2048">
-                    </div>
-                    <div class="input-group">
-                        <label>Alto objetivo (px)</label>
-                        <input type="number" id="targetHeight" placeholder="ej: 2048" value="2048">
-                    </div>
-                    <button class="apply-btn" onclick="applyUpscale()">Aplicar</button>
-                </div>
-            </div>
-
-            <!-- Reimagine Panel -->
-            <div id="panel-reimagine" class="tool-panel" style="display:none">
-                <div class="panel-section">
-                    <div class="panel-title">Reimaginar</div>
-                    <div class="panel-desc">Genera una nueva variacion creativa de tu imagen usando IA. Cada vez obtendras un resultado diferente.</div>
-                    <button class="apply-btn" onclick="applyReimagine()">Aplicar</button>
-                </div>
-            </div>
-
-            <!-- Select/Default Panel -->
-            <div id="panel-select" class="tool-panel">
-                <div class="panel-section">
-                    <div class="panel-title">Bienvenido a PixelAI Studio</div>
-                    <div class="panel-desc">Carga una imagen y selecciona una herramienta del panel izquierdo para comenzar a editar con inteligencia artificial.</div>
-                </div>
-            </div>
-        </aside>
+  <div class="canvas-area" id="canvasArea">
+    <div class="drop-zone" id="dropZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p>Arrastra una imagen aqui</p>
+      <span>o haz clic para seleccionar un archivo</span>
     </div>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">Procesando con IA...</div>
+    <div class="canvas-container" id="canvasContainer" style="display:none">
+      <canvas id="mainCanvas"></canvas>
+      <canvas id="maskCanvas"></canvas>
     </div>
+  </div>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+  <div class="right-panel" id="rightPanel">
+    <div id="panelContent"></div>
+  </div>
+</div>
 
-    <script>
-    const API_KEY = '1646d08f28dd476a4f6129e0b14064a86e5ca9035419d45573d636e9d71939014a498249d0af2d7386afa70ecdf4bb1a';
-    const API_BASE = 'https://clipdrop-api.co';
+<div class="overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingText">Procesando con IA...</p>
+</div>
 
-    // State
-    let currentImage = null;
-    let currentTool = 'select';
-    let undoStack = [];
-    let redoStack = [];
-    let isDrawing = false;
-    let brushSize = 20;
+<div class="toast-container" id="toastContainer"></div>
 
-    // Canvas refs
-    const mainCanvas = document.getElementById('mainCanvas');
-    const maskCanvas = document.getElementById('maskCanvas');
-    const mainCtx = mainCanvas.getContext('2d');
-    const maskCtx = maskCanvas.getContext('2d');
+<input type="file" id="fileInput" class="hidden-input" accept="image/*" onchange="handleFileSelect(event)">
 
-    // Toast system
-    function showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        toast.className = 'toast ' + type;
-        const icons = {
-            success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>',
-            error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-            info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-        };
-        toast.innerHTML = (icons[type] || icons.info) + '<span>' + message + '</span>';
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease forwards';
-            setTimeout(() => toast.remove(), 300);
-        }, 3500);
+<script>
+const API_KEY = '1646d08f28dd476a4f6129e0b14064a86e5ca9035419d45573d636e9d71939014a498249d0af2d7386afa70ecdf4bb1a';
+const PROXY = 'https://corsproxy.io/?';
+const ENDPOINTS = {
+  removeBg: 'https://clipdrop-api.co/remove-background/v1',
+  removeObj: 'https://clipdrop-api.co/cleanup/v1',
+  upscale: 'https://clipdrop-api.co/image-upscaling/v2',
+  reimagine: 'https://clipdrop-api.co/reimagine/v1/reimagine'
+};
+
+let currentTool = null;
+let imageLoaded = false;
+let history = [];
+let historyIndex = -1;
+let isDrawing = false;
+let brushSize = 30;
+let originalImage = null;
+
+const mainCanvas = document.getElementById('mainCanvas');
+const maskCanvas = document.getElementById('maskCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+const maskCtx = maskCanvas.getContext('2d');
+
+function showToast(msg, type) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 4000);
+}
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || 'Procesando con IA...';
+  document.getElementById('loadingOverlay').classList.add('visible');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('visible');
+}
+
+function saveState() {
+  if (historyIndex < history.length - 1) {
+    history = history.slice(0, historyIndex + 1);
+  }
+  history.push(mainCanvas.toDataURL('image/png'));
+  historyIndex++;
+  if (history.length > 30) {
+    history.shift();
+    historyIndex--;
+  }
+  updateUndoRedo();
+}
+
+function updateUndoRedo() {
+  document.getElementById('btnUndo').disabled = historyIndex <= 0;
+  document.getElementById('btnRedo').disabled = historyIndex >= history.length - 1;
+}
+
+function undo() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    loadFromHistory();
+  }
+}
+
+function redo() {
+  if (historyIndex < history.length - 1) {
+    historyIndex++;
+    loadFromHistory();
+  }
+}
+
+function loadFromHistory() {
+  const img = new Image();
+  img.onload = function() {
+    mainCanvas.width = img.width;
+    mainCanvas.height = img.height;
+    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    mainCtx.drawImage(img, 0, 0);
+    syncMaskSize();
+    updateUndoRedo();
+  };
+  img.src = history[historyIndex];
+}
+
+function syncMaskSize() {
+  maskCanvas.width = mainCanvas.width;
+  maskCanvas.height = mainCanvas.height;
+  maskCanvas.style.width = mainCanvas.offsetWidth + 'px';
+  maskCanvas.style.height = mainCanvas.offsetHeight + 'px';
+  maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+}
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const maxW = window.innerWidth - 344 - 40;
+      const maxH = window.innerHeight - 88;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxW || h > maxH) {
+        const ratio = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      mainCanvas.width = w;
+      mainCanvas.height = h;
+      mainCtx.drawImage(img, 0, 0, w, h);
+      originalImage = img;
+      syncMaskSize();
+      document.getElementById('dropZone').style.display = 'none';
+      document.getElementById('canvasContainer').style.display = 'flex';
+      imageLoaded = true;
+      history = [];
+      historyIndex = -1;
+      saveState();
+      showToast('Imagen cargada correctamente', 'success');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) loadImage(file);
+  e.target.value = '';
+}
+
+// Drag and drop
+const dropZone = document.getElementById('dropZone');
+const canvasArea = document.getElementById('canvasArea');
+canvasArea.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+canvasArea.addEventListener('dragleave', function(e) { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+canvasArea.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImage(file);
+});
+dropZone.addEventListener('click', function() { document.getElementById('fileInput').click(); });
+
+function selectTool(tool) {
+  if (!imageLoaded) { showToast('Carga una imagen primero', 'error'); return; }
+  document.querySelectorAll('.sidebar button').forEach(function(b) { b.classList.remove('active'); });
+  currentTool = tool;
+  var btnId = { removeBg:'toolBg', removeObj:'toolRemove', upscale:'toolUpscale', reimagine:'toolReimagine' };
+  if (btnId[tool]) document.getElementById(btnId[tool]).classList.add('active');
+
+  var panel = document.getElementById('rightPanel');
+  var content = document.getElementById('panelContent');
+  panel.classList.add('visible');
+
+  if (tool === 'removeBg') {
+    content.innerHTML = '<h3>Eliminar Fondo</h3><p>Elimina automaticamente el fondo de la imagen usando IA. Ideal para productos, retratos y objetos.</p><button class="btn-apply" onclick="applyRemoveBg()">Aplicar</button>';
+    maskCanvas.style.pointerEvents = 'none';
+    clearMask();
+  } else if (tool === 'removeObj') {
+    content.innerHTML = '<h3>Eliminar Objetos</h3><p>Pinta sobre los objetos que deseas eliminar. La zona pintada de rojo sera removida por la IA.</p><label>Tamano del pincel</label><input type="range" min="5" max="100" value="' + brushSize + '" oninput="updateBrush(this.value)"><div class="brush-size-display" id="brushDisplay">' + brushSize + 'px</div><button class="btn-apply" onclick="applyRemoveObj()" style="margin-top:16px">Aplicar</button><button class="btn-apply" onclick="clearMask()" style="margin-top:8px;background:#2a2a4a">Limpiar mascara</button>';
+    maskCanvas.style.pointerEvents = 'auto';
+  } else if (tool === 'upscale') {
+    content.innerHTML = '<h3>Mejorar Calidad</h3><p>Aumenta la resolucion de la imagen usando IA. Escala la imagen al doble de su tamano actual.</p><button class="btn-apply" onclick="applyUpscale()">Aplicar (2x)</button>';
+    maskCanvas.style.pointerEvents = 'none';
+    clearMask();
+  } else if (tool === 'reimagine') {
+    content.innerHTML = '<h3>Reimaginar</h3><p>Genera una variacion creativa de tu imagen usando IA. Cada vez obtendras un resultado diferente.</p><button class="btn-apply" onclick="applyReimagine()">Aplicar</button>';
+    maskCanvas.style.pointerEvents = 'none';
+    clearMask();
+  }
+
+  setTimeout(function() {
+    maskCanvas.style.width = mainCanvas.offsetWidth + 'px';
+    maskCanvas.style.height = mainCanvas.offsetHeight + 'px';
+  }, 50);
+}
+
+function updateBrush(val) {
+  brushSize = parseInt(val);
+  document.getElementById('brushDisplay').textContent = brushSize + 'px';
+}
+
+function clearMask() {
+  maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+}
+
+// Mask drawing
+maskCanvas.addEventListener('mousedown', function(e) {
+  if (currentTool !== 'removeObj') return;
+  isDrawing = true;
+  drawOnMask(e);
+});
+maskCanvas.addEventListener('mousemove', function(e) {
+  if (!isDrawing) return;
+  drawOnMask(e);
+});
+maskCanvas.addEventListener('mouseup', function() { isDrawing = false; });
+maskCanvas.addEventListener('mouseleave', function() { isDrawing = false; });
+
+function drawOnMask(e) {
+  const rect = maskCanvas.getBoundingClientRect();
+  const scaleX = maskCanvas.width / rect.width;
+  const scaleY = maskCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  maskCtx.beginPath();
+  maskCtx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2);
+  maskCtx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+  maskCtx.fill();
+}
+
+function getCanvasBlob() {
+  return new Promise(function(resolve) {
+    mainCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
+  });
+}
+
+function getMaskBlob() {
+  return new Promise(function(resolve) {
+    var tempCanvas = document.createElement('canvas');
+    tempCanvas.width = maskCanvas.width;
+    tempCanvas.height = maskCanvas.height;
+    var ctx = tempCanvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    var imageData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+    var data = imageData.data;
+    var outData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    var out = outData.data;
+    for (var i = 0; i < data.length; i += 4) {
+      if (data[i] > 100 && data[i+3] > 0) {
+        out[i] = 255;
+        out[i+1] = 255;
+        out[i+2] = 255;
+        out[i+3] = 255;
+      }
     }
+    ctx.putImageData(outData, 0, 0);
+    tempCanvas.toBlob(function(blob) { resolve(blob); }, 'image/png');
+  });
+}
 
-    // Loading
-    function showLoading(text) {
-        document.getElementById('loadingText').textContent = text || 'Procesando con IA...';
-        document.getElementById('loadingOverlay').classList.add('active');
-    }
+function loadResultImage(blob) {
+  var url = URL.createObjectURL(blob);
+  var img = new Image();
+  img.onload = function() {
+    mainCanvas.width = img.width;
+    mainCanvas.height = img.height;
+    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    mainCtx.drawImage(img, 0, 0);
+    syncMaskSize();
+    saveState();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
 
-    function hideLoading() {
-        document.getElementById('loadingOverlay').classList.remove('active');
-    }
-
-    // File upload
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            showToast('Por favor selecciona un archivo de imagen valido', 'error');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            loadImageFromDataURL(e.target.result);
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function loadImageFromDataURL(dataURL) {
-        const img = new Image();
-        img.onload = function() {
-            currentImage = img;
-            drawImageToCanvas(img);
-            document.getElementById('uploadArea').style.display = 'none';
-            mainCanvas.style.display = 'block';
-            saveToUndoStack();
-            showToast('Imagen cargada correctamente', 'success');
-        };
-        img.src = dataURL;
-    }
-
-    function drawImageToCanvas(img) {
-        mainCanvas.width = img.width;
-        mainCanvas.height = img.height;
-        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-        mainCtx.drawImage(img, 0, 0);
-
-        // Also resize mask canvas
-        maskCanvas.width = img.width;
-        maskCanvas.height = img.height;
-        maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-
-        // Fit canvas display
-        fitCanvasDisplay();
-    }
-
-    function fitCanvasDisplay() {
-        const area = document.getElementById('canvasArea');
-        const maxW = area.clientWidth * 0.9;
-        const maxH = area.clientHeight * 0.9;
-        const ratio = Math.min(maxW / mainCanvas.width, maxH / mainCanvas.height, 1);
-        const displayW = mainCanvas.width * ratio;
-        const displayH = mainCanvas.height * ratio;
-
-        mainCanvas.style.width = displayW + 'px';
-        mainCanvas.style.height = displayH + 'px';
-        maskCanvas.style.width = displayW + 'px';
-        maskCanvas.style.height = displayH + 'px';
-    }
-
-    // Tool selection
-    function selectTool(tool) {
-        currentTool = tool;
-        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('[data-tool="' + tool + '"]').classList.add('active');
-
-        // Show/hide panels
-        document.querySelectorAll('.tool-panel').forEach(p => p.style.display = 'none');
-        const panel = document.getElementById('panel-' + tool);
-        if (panel) panel.style.display = 'block';
-
-        // Show/hide mask canvas
-        if (tool === 'cleanup' && currentImage) {
-            maskCanvas.style.display = 'block';
-            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-        } else {
-            maskCanvas.style.display = 'none';
-        }
-    }
-
-    // Brush size
-    function updateBrushSize(val) {
-        brushSize = parseInt(val);
-        document.getElementById('brushSizeValue').textContent = val + 'px';
-    }
-
-    // Mask drawing
-    maskCanvas.addEventListener('mousedown', startDrawing);
-    maskCanvas.addEventListener('mousemove', draw);
-    maskCanvas.addEventListener('mouseup', stopDrawing);
-    maskCanvas.addEventListener('mouseleave', stopDrawing);
-    maskCanvas.addEventListener('touchstart', function(e) { e.preventDefault(); startDrawing(getTouchEvent(e)); });
-    maskCanvas.addEventListener('touchmove', function(e) { e.preventDefault(); draw(getTouchEvent(e)); });
-    maskCanvas.addEventListener('touchend', stopDrawing);
-
-    function getTouchEvent(e) {
-        const rect = maskCanvas.getBoundingClientRect();
-        return { offsetX: e.touches[0].clientX - rect.left, offsetY: e.touches[0].clientY - rect.top };
-    }
-
-    function startDrawing(e) {
-        if (currentTool !== 'cleanup') return;
-        isDrawing = true;
-        draw(e);
-    }
-
-    function draw(e) {
-        if (!isDrawing || currentTool !== 'cleanup') return;
-        const scaleX = maskCanvas.width / maskCanvas.offsetWidth;
-        const scaleY = maskCanvas.height / maskCanvas.offsetHeight;
-        const x = e.offsetX * scaleX;
-        const y = e.offsetY * scaleY;
-
-        maskCtx.fillStyle = 'rgba(255, 255, 255, 1)';
-        maskCtx.beginPath();
-        maskCtx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2);
-        maskCtx.fill();
-
-        // Visual feedback with semi-transparent red
-        maskCtx.fillStyle = 'rgba(234, 102, 102, 0.4)';
-        maskCtx.beginPath();
-        maskCtx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2);
-        maskCtx.fill();
-    }
-
-    function stopDrawing() {
-        isDrawing = false;
-    }
-
-    // Undo/Redo
-    function saveToUndoStack() {
-        undoStack.push(mainCanvas.toDataURL('image/png'));
-        redoStack = [];
-        updateUndoRedoButtons();
-    }
-
-    function undo() {
-        if (undoStack.length <= 1) return;
-        redoStack.push(undoStack.pop());
-        const dataURL = undoStack[undoStack.length - 1];
-        restoreFromDataURL(dataURL);
-        updateUndoRedoButtons();
-        showToast('Deshacer', 'info');
-    }
-
-    function redo() {
-        if (redoStack.length === 0) return;
-        const dataURL = redoStack.pop();
-        undoStack.push(dataURL);
-        restoreFromDataURL(dataURL);
-        updateUndoRedoButtons();
-        showToast('Rehacer', 'info');
-    }
-
-    function restoreFromDataURL(dataURL) {
-        const img = new Image();
-        img.onload = function() {
-            currentImage = img;
-            mainCanvas.width = img.width;
-            mainCanvas.height = img.height;
-            mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-            mainCtx.drawImage(img, 0, 0);
-            maskCanvas.width = img.width;
-            maskCanvas.height = img.height;
-            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-            fitCanvasDisplay();
-        };
-        img.src = dataURL;
-    }
-
-    function updateUndoRedoButtons() {
-        document.getElementById('undoBtn').classList.toggle('disabled', undoStack.length <= 1);
-        document.getElementById('redoBtn').classList.toggle('disabled', redoStack.length === 0);
-    }
-
-    // Get current image as blob
-    function getCanvasBlob(canvas, type) {
-        return new Promise(resolve => {
-            canvas.toBlob(resolve, type || 'image/png');
-        });
-    }
-
-    // API Calls
-    async function applyRemoveBg() {
-        if (!currentImage) {
-            showToast('Primero carga una imagen', 'error');
-            return;
-        }
-        showLoading('Eliminando fondo...');
-        try {
-            const blob = await getCanvasBlob(mainCanvas);
-            const formData = new FormData();
-            formData.append('image_file', blob, 'image.png');
-
-            const response = await fetch(API_BASE + '/remove-background/v1', {
-                method: 'POST',
-                headers: { 'x-api-key': API_KEY },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error('Error ' + response.status + ': ' + errText);
-            }
-
-            const resultBlob = await response.blob();
-            const url = URL.createObjectURL(resultBlob);
-            loadImageFromDataURL(url);
-            showToast('Fondo eliminado exitosamente', 'success');
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
-            console.error(err);
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async function applyCleanup() {
-        if (!currentImage) {
-            showToast('Primero carga una imagen', 'error');
-            return;
-        }
-
-        // Check if mask has content
-        const maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-        let hasMask = false;
-        for (let i = 3; i < maskData.length; i += 4) {
-            if (maskData[i] > 0) { hasMask = true; break; }
-        }
-        if (!hasMask) {
-            showToast('Pinta sobre los objetos a eliminar primero', 'error');
-            return;
-        }
-
-        showLoading('Eliminando objetos...');
-        try {
-            // Create a proper white-on-black mask
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = maskCanvas.width;
-            tempCanvas.height = maskCanvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.fillStyle = 'black';
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-            // Draw mask areas in white
-            const origData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
-            const newData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            for (let i = 0; i < origData.data.length; i += 4) {
-                if (origData.data[i + 3] > 0) {
-                    newData.data[i] = 255;
-                    newData.data[i + 1] = 255;
-                    newData.data[i + 2] = 255;
-                    newData.data[i + 3] = 255;
-                }
-            }
-            tempCtx.putImageData(newData, 0, 0);
-
-            const imageBlob = await getCanvasBlob(mainCanvas);
-            const maskBlob = await getCanvasBlob(tempCanvas);
-
-            const formData = new FormData();
-            formData.append('image_file', imageBlob, 'image.png');
-            formData.append('mask_file', maskBlob, 'mask.png');
-
-            const response = await fetch(API_BASE + '/cleanup/v1', {
-                method: 'POST',
-                headers: { 'x-api-key': API_KEY },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error('Error ' + response.status + ': ' + errText);
-            }
-
-            const resultBlob = await response.blob();
-            const url = URL.createObjectURL(resultBlob);
-            loadImageFromDataURL(url);
-            showToast('Objetos eliminados exitosamente', 'success');
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
-            console.error(err);
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async function applyUpscale() {
-        if (!currentImage) {
-            showToast('Primero carga una imagen', 'error');
-            return;
-        }
-        const targetWidth = parseInt(document.getElementById('targetWidth').value) || 2048;
-        const targetHeight = parseInt(document.getElementById('targetHeight').value) || 2048;
-
-        if (targetWidth < 1 || targetHeight < 1 || targetWidth > 16384 || targetHeight > 16384) {
-            showToast('Las dimensiones deben estar entre 1 y 16384', 'error');
-            return;
-        }
-
-        showLoading('Mejorando calidad...');
-        try {
-            const blob = await getCanvasBlob(mainCanvas);
-            const formData = new FormData();
-            formData.append('image_file', blob, 'image.png');
-            formData.append('target_width', targetWidth);
-            formData.append('target_height', targetHeight);
-
-            const response = await fetch(API_BASE + '/image-upscaling/v2', {
-                method: 'POST',
-                headers: { 'x-api-key': API_KEY },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error('Error ' + response.status + ': ' + errText);
-            }
-
-            const resultBlob = await response.blob();
-            const url = URL.createObjectURL(resultBlob);
-            loadImageFromDataURL(url);
-            showToast('Imagen mejorada a ' + targetWidth + 'x' + targetHeight, 'success');
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
-            console.error(err);
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async function applyReimagine() {
-        if (!currentImage) {
-            showToast('Primero carga una imagen', 'error');
-            return;
-        }
-        showLoading('Reimaginando imagen...');
-        try {
-            const blob = await getCanvasBlob(mainCanvas);
-            const formData = new FormData();
-            formData.append('image_file', blob, 'image.png');
-
-            const response = await fetch(API_BASE + '/reimagine/v1/reimagine', {
-                method: 'POST',
-                headers: { 'x-api-key': API_KEY },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error('Error ' + response.status + ': ' + errText);
-            }
-
-            const resultBlob = await response.blob();
-            const url = URL.createObjectURL(resultBlob);
-            loadImageFromDataURL(url);
-            showToast('Imagen reimaginada exitosamente', 'success');
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
-            console.error(err);
-        } finally {
-            hideLoading();
-        }
-    }
-
-    // Download
-    function downloadImage() {
-        if (!currentImage) {
-            showToast('No hay imagen para exportar', 'error');
-            return;
-        }
-        const link = document.createElement('a');
-        link.download = 'pixelai-studio-export.png';
-        link.href = mainCanvas.toDataURL('image/png');
-        link.click();
-        showToast('Imagen exportada', 'success');
-    }
-
-    // Drag and drop
-    const canvasArea = document.getElementById('canvasArea');
-    canvasArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        canvasArea.style.background = 'rgba(102, 126, 234, 0.05)';
+async function applyRemoveBg() {
+  showLoading('Eliminando fondo...');
+  try {
+    var blob = await getCanvasBlob();
+    var formData = new FormData();
+    formData.append('image_file', blob, 'image.png');
+    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.removeBg), {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY },
+      body: formData
     });
-    canvasArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        canvasArea.style.background = '';
-    });
-    canvasArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        canvasArea.style.background = '';
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                loadImageFromDataURL(ev.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
+    if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
+    var resultBlob = await response.blob();
+    loadResultImage(resultBlob);
+    showToast('Fondo eliminado correctamente', 'success');
+  } catch(err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  hideLoading();
+}
 
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            e.preventDefault();
-            if (e.shiftKey) redo();
-            else undo();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            downloadImage();
-        }
+async function applyRemoveObj() {
+  var maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+  var hasMask = false;
+  for (var i = 0; i < maskData.length; i += 4) {
+    if (maskData[i] > 100 && maskData[i+3] > 0) { hasMask = true; break; }
+  }
+  if (!hasMask) { showToast('Pinta sobre los objetos a eliminar primero', 'error'); return; }
+  showLoading('Eliminando objetos...');
+  try {
+    var imgBlob = await getCanvasBlob();
+    var mskBlob = await getMaskBlob();
+    var formData = new FormData();
+    formData.append('image_file', imgBlob, 'image.png');
+    formData.append('mask_file', mskBlob, 'mask.png');
+    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.removeObj), {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY },
+      body: formData
     });
+    if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
+    var resultBlob = await response.blob();
+    loadResultImage(resultBlob);
+    clearMask();
+    showToast('Objetos eliminados correctamente', 'success');
+  } catch(err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  hideLoading();
+}
 
-    // Resize handler
-    window.addEventListener('resize', function() {
-        if (currentImage) fitCanvasDisplay();
+async function applyUpscale() {
+  showLoading('Mejorando calidad...');
+  try {
+    var blob = await getCanvasBlob();
+    var tw = mainCanvas.width * 2;
+    var th = mainCanvas.height * 2;
+    var formData = new FormData();
+    formData.append('image_file', blob, 'image.png');
+    formData.append('target_width', tw.toString());
+    formData.append('target_height', th.toString());
+    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.upscale), {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY },
+      body: formData
     });
+    if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
+    var resultBlob = await response.blob();
+    loadResultImage(resultBlob);
+    showToast('Imagen mejorada a ' + tw + 'x' + th, 'success');
+  } catch(err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  hideLoading();
+}
 
-    // Init
-    updateUndoRedoButtons();
-    </script>
+async function applyReimagine() {
+  showLoading('Reimaginando imagen...');
+  try {
+    var blob = await getCanvasBlob();
+    var formData = new FormData();
+    formData.append('image_file', blob, 'image.png');
+    var response = await fetch(PROXY + encodeURIComponent(ENDPOINTS.reimagine), {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY },
+      body: formData
+    });
+    if (!response.ok) throw new Error('Error ' + response.status + ': ' + await response.text());
+    var resultBlob = await response.blob();
+    loadResultImage(resultBlob);
+    showToast('Imagen reimaginada correctamente', 'success');
+  } catch(err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  hideLoading();
+}
+
+function exportImage() {
+  if (!imageLoaded) { showToast('No hay imagen para exportar', 'error'); return; }
+  var link = document.createElement('a');
+  link.download = 'ai-editor-export.png';
+  link.href = mainCanvas.toDataURL('image/png');
+  link.click();
+  showToast('Imagen exportada', 'success');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  if (e.ctrlKey && e.shiftKey && (e.key === 'Z' || e.key === 'z')) { e.preventDefault(); redo(); }
+  if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); exportImage(); }
+});
+
+// Resize handler
+window.addEventListener('resize', function() {
+  if (imageLoaded) {
+    setTimeout(function() {
+      maskCanvas.style.width = mainCanvas.offsetWidth + 'px';
+      maskCanvas.style.height = mainCanvas.offsetHeight + 'px';
+    }, 100);
+  }
+});
+</script>
 </body>
 </html>
